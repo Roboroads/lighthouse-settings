@@ -1,0 +1,37 @@
+{
+    "name": "roboroads/lighthouse-settings",
+    "description": "A Lighthouse plugin to add settings to your graphql",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Roboroads\\LighthouseSettings\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Robbin Schepers",
+            "email": "robbin@deschepers.nl"
+        }
+    ],
+    "require": {
+        "php": ">=7.0",
+        "nuwave/lighthouse": ">=5",
+        "spatie/laravel-settings": ">=2",
+        "illuminate/support": ">=8"
+    },
+    "require-dev": {
+        "captainhook/captainhook": "^5.10",
+        "laravel/pint": "^0.2.0"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Roboroads\\LighthouseSettings\\ServiceProvider"
+            ]
+        }
+    },
+    "archive": {
+        "exclude": [".github", "captainhook.json", ".idea", "pint.json"]
+    }
+}

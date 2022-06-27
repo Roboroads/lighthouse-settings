@@ -1,0 +1,77 @@
+name: Release
+on:
+  workflow_dispatch:
+    inputs:
+      forceVersionType:
+        description: 'Force specific versioning type'
+        default: ''
+        type: choice
+        required: false
+        options:
+          - ''
+          - 'major'
+          - 'minor'
+          - 'patch'
+
+jobs:
+  release:
+    name: Release Graphton
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: Fetch Sources
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "16.x"
+          registry-url: "https://registry.yarnpkg.com"
+
+      - name: Setup registries
+        run: |
+          yarn config set --json npmRegistries '{ "//registry.yarnpkg.com": { "npmAuthToken": "'${{ secrets.NPM_TOKEN }}'" }, "//npm.pkg.github.com": { "npmAuthToken": "'${{ secrets.GITHUB_TOKEN }}'" } }'
+
+      - name: Setup git config
+        run: |
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+      - name: Link yarn dependencies
+        run: yarn
+
+      - name: Get changelog for this release
+        run: yarn standard-version --dry-run | sed -n '/^---$/,/^---$/p' | sed '1d;$d' | tee RELEASE_CHANGELOG.md
+
+      - name: Set changelog, version and tag
+        env:
+          FORCE_VERSION_TYPE: ${{ github.event.inputs.forceVersionType }}
+        run: |
+          [[ ! -z "$FORCE_VERSION_TYPE" ]] && yarn standard-version --as-version $FORCE_VERSION_TYPE || yarn standard-version
+
+      - name: Grab new version for release
+        run: echo "RELEASE_VERSION=$(node -e "console.log(require('./package.json').version);")" >> $GITHUB_ENV
+
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          tags: true
+
+      - name: Publish NPM
+        run: yarn npm publish --access public
+
+      - name: Setup to publish to GitHub Packages
+        run: yarn config set npmPublishRegistry 'https://npm.pkg.github.com'
+
+      - name: Publish GitHub
+        run: yarn npm publish
+
+      - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create v$RELEASE_VERSION \
+            --title "v$RELEASE_VERSION" \
+            --notes "$(cat RELEASE_CHANGELOG.md)"
