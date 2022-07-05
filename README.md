@@ -71,7 +71,28 @@ type Mutation {
 }
 ```
 
-> Note: You can use @rules, @trin, @can, etc. like you can when updating models.
+> Note: Except for @can, you can use @rules, @trim, etc. like you can when updating models.
+
+### Using @canSettings instead of @can
+
+Since Lighthouse really wants to connect @can to an actual Model, you have to use @canSettings to use the ability to authorize the user for settings.
+
+```graphql
+type Mutation {
+    updateGeneralSettings(
+        name: String!
+        url: String!
+        description: String!
+    ): GeneralSettings! @settings @canSettings(ability: "editSettings")
+}
+```
+
+```php
+//Defining a gate
+Gate::define('editSettings', function (User $user, string $settingsClass) {
+    return $user->isAdmin();
+});
+```
 
 ## Optional configuration
 

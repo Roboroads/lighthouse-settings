@@ -13,6 +13,7 @@ use Nuwave\Lighthouse\Support\Contracts\ArgResolver;
 use Nuwave\Lighthouse\Support\Contracts\FieldResolver;
 use Nuwave\Lighthouse\Support\Contracts\GraphQLContext;
 use Roboroads\LighthouseSettings\Exceptions\NotInstanceOfSettingsException;
+use Roboroads\LighthouseSettings\Helpers\SettingsInstanceHelper;
 use Spatie\LaravelSettings\Settings;
 
 class SettingsDirective extends BaseDirective implements FieldResolver
@@ -35,30 +36,7 @@ GRAPHQL;
     public function resolveField(FieldValue $fieldValue): FieldValue
     {
         $fieldValue->setResolver(function ($root, array $args, GraphQLContext $context, ResolveInfo $resolveInfo): Settings {
-            // Get name of the settings class
-            if ($this->directiveHasArgument('class')) {
-                $settingsClass = $this->directiveArgValue('class');
-            } else {
-                $settingsClass = ASTHelper::modelName($this->definitionNode);
-            }
-            
-            // Find out if we can instanciate the settings class
-            try {
-                $settingsInstance = App::make($settingsClass);
-            } catch (Exception $ex) {
-                $originalException = $ex;
-                try {
-                    $settingsInstance = App::make((config('lighthouse-settings.settings-namespace') ?? '\\App\\Settings') . '\\' . $settingsClass);
-                } catch (Exception $ex) {
-                    throw $originalException;
-                }
-            }
-            
-            // Instance should be subclass of Settings
-            if(!is_subclass_of($settingsInstance, Settings::class)) {
-                throw new NotInstanceOfSettingsException($settingsInstance::class);
-            }
-            /* @var Settings $settingsInstance */
+            $settingsInstance = (new SettingsInstanceHelper($this->definitionNode, $this->directiveArgValue('class')))->getSettingsInstance();
             
             // If @setting is used for a mutation, update the settings
             if($resolveInfo->operation->operation === "mutation") {
